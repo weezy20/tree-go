@@ -2,6 +2,7 @@ package bst
 
 import (
 	"testing"
+	"unsafe"
 )
 
 // Define a simple type for testing
@@ -80,8 +81,7 @@ func TestSearch(t *testing.T) {
 	node := tree.Search(7)
 	if node == nil {
 		t.Errorf("Expected to find key 7, but got nil")
-	}
-	if *node.Key != 7 {
+	} else if *node.Key != 7 {
 		t.Errorf("Expected node key to be 7, got %d", *node.Key)
 	}
 
@@ -111,5 +111,22 @@ func TestIsPartialLeaf(t *testing.T) {
 	}
 	if !tree.Root.Left.isLeaf() {
 		t.Errorf("Expected left node with key 5 to be a leaf")
+	}
+}
+
+func TestNodeSize(t *testing.T) {
+	// Node struct is 4+4+4+4 = 32 bytes wide
+	expectedSize := uintptr(32)
+
+	var node *Node[IntItem]
+	size := unsafe.Sizeof(*node)
+	if size != expectedSize {
+		t.Errorf("Expected node size to be %d bytes, got %d bytes", expectedSize, size)
+	}
+
+	var largeNode *Node[string]
+	largeNodeSize := unsafe.Sizeof(*largeNode)
+	if largeNodeSize != expectedSize {
+		t.Errorf("Expected large node size to be %d bytes, got %d bytes", expectedSize, largeNodeSize)
 	}
 }

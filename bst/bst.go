@@ -28,7 +28,7 @@ type Node[T Item] struct {
 	Parent *Node[T]
 }
 
-// Size returns the number of nodes in the tree
+// Size returns the size of a Node
 func (n *Node[T]) Size() uintptr {
 	return unsafe.Sizeof(*n)
 }
