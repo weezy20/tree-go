@@ -65,11 +65,11 @@ tree = bst.New[string]("Hello")
 node := tree.Search("Hello") // Returns root node
 ```
 
-### Delete (Unimplemented)
+### Delete
 Deletes a key from the BST.
 
 ```go
-func (t *Tree[T]) Delete(key *T)
+func (t *Tree[T]) Delete(key T)
 ```
 
 **Example:**

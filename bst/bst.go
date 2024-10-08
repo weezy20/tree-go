@@ -4,6 +4,8 @@ package bst
 
 import (
 	"cmp"
+	"errors"
+	"fmt"
 	"unsafe"
 )
 
@@ -66,39 +68,46 @@ func (t *Tree[T]) Insert(key T) {
 		t.Root = &Node[T]{Key: &key}
 		return
 	} else {
-		node := t.findAvailableNode(&key)
-		insertChild(node, &key)
+		parent, err := t.findAvailableNode(&key)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		if insertChild(parent, &key) {
+			fmt.Printf("key %v inserted successfully\n", key)
+		}
 	}
 }
 
 // findAvailableNode finds a node in the tree where a new key can be inserted
-func (t *Tree[T]) findAvailableNode(key *T) *Node[T] {
-	current := t.Root
+// In case keys are already present, returns the node and an associated error
+func (t *Tree[T]) findAvailableNode(key *T) (*Node[T], error) {
+	current := t.Root // non-nil has already been checked in caller
 	for current != nil && !current.isPartialLeaf() {
-		if cmp.Less(*key, *current.Key) || *key == *current.Key {
+		if cmp.Less(*key, *current.Key) {
 			current = current.Left
-		} else {
+		} else if cmp.Less(*current.Key, *key) {
 			current = current.Right
+		} else {
+			return current, errors.New("key already exists in the tree")
 		}
 	}
-	return current
+	return current, nil
 }
 
-// This function doesn't check BST traversal constraints
-// It simply inserts a key as a child of node `n` if it has space for children
-// Returns `true` on successful insertion otherwise `false` for failure
-func insertChild[T Item](n *Node[T], key *T) bool {
-	// Primary condition we want to check
-	if n == nil {
-		return false
+// Assumes n is non-nil
+// It simply inserts a key as a child of node n.
+// n is expected to be at least a partial leaf checked above
+// Node is checked to be non-nil by the functions above
+func insertChild[T Item](parent *Node[T], key *T) bool {
+	if parent == nil {
+		panic("Expected parent node to be non-nil")
 	}
-	// In case of equal keys, we prefer the Left Child to hold the key
-	if n.Left == nil && (cmp.Less(*key, *n.Key) || *key == *n.Key) {
-		n.Left = &Node[T]{Key: key, Parent: n}
+	if parent.Left == nil && cmp.Less(*key, *parent.Key) {
+		parent.Left = &Node[T]{Key: key, Parent: parent}
 		return true
-	}
-	if n.Right == nil && cmp.Less(*n.Key, *key) {
-		n.Right = &Node[T]{Key: key, Parent: n}
+	} else if parent.Right == nil && cmp.Less(*parent.Key, *key) {
+		parent.Right = &Node[T]{Key: key, Parent: parent}
 		return true
 	}
 	return false
@@ -134,4 +143,29 @@ func search[T Item](n *Node[T], key *T) *Node[T] {
 	} else {
 		return search(n.Right, key)
 	}
+}
+
+// Delete a key from the tree
+// func (t *Tree[T]) Delete(key T) *Node[T] {
+// 	node, err := delete(t.Root, &key)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 		return nil
+// 	}
+// 	return node
+// }
+
+// Delete a key from `node`'s subtree
+// func delete[T Item](node *Node[T], key *T) (*Node[T], error) {
+// 	if node == nil {
+// 		return node, errors.New("Cannot delete from an empty tree")
+// 	}
+// }
+
+func findMin[T Item](node *Node[T]) *Node[T] {
+	current := node
+	for current.Left != nil {
+		current = current.Left
+	}
+	return current
 }
