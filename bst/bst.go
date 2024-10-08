@@ -30,6 +30,26 @@ type Node[T Item] struct {
 	Parent *Node[T]
 }
 
+type NodeType int
+
+const (
+	Left NodeType = iota
+	Right
+	Root
+)
+
+// Returns which child of the parent this node is
+func (n *Node[T]) ChildType() NodeType {
+	if n.Parent == nil {
+		return Root
+	} else if n.Parent.Left == n {
+		return Left
+	} else if n.Parent.Right == n {
+		return Right
+	}
+	return Root // Default return to handle all cases
+}
+
 // Size returns the size of a Node
 func (n *Node[T]) Size() uintptr {
 	return unsafe.Sizeof(*n)
@@ -47,6 +67,18 @@ func (n *Node[T]) isPartialLeaf() bool {
 	} else {
 		return (n.Left == nil && n.Right != nil) || (n.Left != nil && n.Right == nil)
 	}
+}
+
+// Get non null children of a Node
+func (n *Node[T]) Children() []*Node[T] {
+	var children []*Node[T]
+	if n.Left != nil {
+		children = append(children, n.Left)
+	}
+	if n.Right != nil {
+		children = append(children, n.Right)
+	}
+	return []*Node[T]{n.Left, n.Right}
 }
 
 // Create a new BST. In case multiple arguments are passed, the first one is considered the root
@@ -146,21 +178,92 @@ func search[T Item](n *Node[T], key *T) *Node[T] {
 }
 
 // Delete a key from the tree
-// func (t *Tree[T]) Delete(key T) *Node[T] {
-// 	node, err := delete(t.Root, &key)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return nil
-// 	}
-// 	return node
-// }
+func (t *Tree[T]) Delete(key T) error {
+	if *t.Root.Key == key {
+		// Root is the only node in the tree
+		if t.Root.isLeaf() {
+			t.Root = nil
+			return nil
+		} else if t.Root.isPartialLeaf() {
+			// Promote the only child as the new root
+			child := t.Root.Children()[0]
+			t.Root = child
+			return nil
+		} else {
+			// Case 3: Root has two children
+			// Find the minimum value in the right subtree
+			min := findMin(t.Root.Right)
+			t.Root.Key = min.Key
+			// Delete the minimum value node
+			delete(t.Root.Right, min.Key)
+			return nil
+		}
+	}
+	err := delete(t.Root, &key)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return nil
+}
 
-// Delete a key from `node`'s subtree
-// func delete[T Item](node *Node[T], key *T) (*Node[T], error) {
-// 	if node == nil {
-// 		return node, errors.New("Cannot delete from an empty tree")
-// 	}
-// }
+// Delete a key from subtree
+// If the node is a leaf node, then we simply remove it
+// If the node is a partial leaf node, we promote the only child as the new node
+// TODO : for two children
+func delete[T Item](subtree *Node[T], key *T) error {
+	if subtree == nil {
+		return errors.New("key to remove not found in the tree")
+	}
+	if *subtree.Key == *key {
+		// Case 1: Subtree is a leaf node
+		if subtree.isLeaf() {
+			var parent = subtree.Parent
+			switch subtree.ChildType() {
+			case Left:
+				parent.Left = nil
+			case Right:
+				parent.Right = nil
+			case Root:
+				// Dead code, but still shown for completeness
+				panic("root should be checked before calling delete")
+			}
+			zeroize(subtree)
+			return nil
+		}
+		// Case 2: Subtree is a partial leaf node
+		if subtree.isPartialLeaf() {
+			var parent = subtree.Parent
+			var child = subtree.Children()[0]
+			switch subtree.ChildType() {
+			case Left:
+				parent.Left = child
+			case Right:
+				parent.Right = child
+			}
+			zeroize(subtree)
+			return nil
+		}
+		// Case 3: Subtree has two children
+		panic("Not implemented yet")
+	} else {
+		switch cmp.Less(*key, *subtree.Key) {
+		case true:
+			return delete(subtree.Left, key)
+		case false:
+			return delete(subtree.Right, key)
+		}
+	}
+	return nil
+}
+
+// Zero a node
+func zeroize[T Item](node *Node[T]) {
+	node.Left = nil
+	node.Right = nil
+	node.Key = nil
+	node.Parent = nil
+}
 
 func findMin[T Item](node *Node[T]) *Node[T] {
 	current := node
