@@ -130,3 +130,62 @@ func TestNodeSize(t *testing.T) {
 		t.Errorf("Expected large node size to be %d bytes, got %d bytes", expectedSize, largeNodeSize)
 	}
 }
+
+func TestDelete(t *testing.T) {
+	// Test deleting a leaf node
+	tree := New[IntItem](10, 5, 15, 3, 7)
+	err := tree.Delete(3)
+	if err != nil {
+		t.Errorf("Unexpected error while deleting leaf node: %v", err)
+	}
+	if tree.Search(3) != nil {
+		t.Errorf("Expected key 3 to be deleted, but it was found")
+	}
+
+	// Test deleting a node with one child
+	err = tree.Delete(5)
+	if err != nil {
+		t.Errorf("Unexpected error while deleting node with one child: %v", err)
+	}
+	if tree.Search(5) != nil {
+		t.Errorf("Expected key 5 to be deleted, but it was found")
+	}
+	if tree.Root.Left.Key == nil || *tree.Root.Left.Key != 7 {
+		t.Errorf("Expected left child of root to be 7, got %v", tree.Root.Left.Key)
+	}
+
+	// Test deleting a node with two children
+	tree.Insert(6)
+	tree.Insert(8)
+	err = tree.Delete(7)
+	if err != nil {
+		t.Errorf("Unexpected error while deleting node with two children: %v", err)
+	}
+	if tree.Search(7) != nil {
+		t.Errorf("Expected key 7 to be deleted, but it was found")
+	}
+	if tree.Root.Left.Key == nil || *tree.Root.Left.Key != 8 {
+		t.Errorf("Expected left child of root to be 8, got %v", tree.Root.Left.Key)
+	}
+
+	// Test deleting the root node
+	err = tree.Delete(10)
+	if err != nil {
+		t.Errorf("Unexpected error while deleting root node: %v", err)
+	}
+	if tree.Search(10) != nil {
+		t.Errorf("Expected key 10 to be deleted, but it was found")
+	}
+	if tree.Root.Key == nil || *tree.Root.Key != 15 {
+		t.Errorf("Expected new root to be 15, got %v", tree.Root.Key)
+	}
+
+	// Test deleting the last node
+	err = tree.Delete(15)
+	if err != nil {
+		t.Errorf("Unexpected error while deleting the last node: %v", err)
+	}
+	if tree.Root != nil {
+		t.Errorf("Expected tree to be empty, but root is %v", tree.Root)
+	}
+}
